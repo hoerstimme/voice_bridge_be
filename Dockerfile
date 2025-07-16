@@ -20,5 +20,5 @@ COPY ./src/voice_bridge_be /src/voice_bridge_be
 
 ENV PYTHONPATH=/src
 
-EXPOSE 80
-CMD uvicorn voice_bridge_be.main:app --host 0.0.0.0 --port 80 --no-access-log
+EXPOSE 8000
+CMD uvicorn voice_bridge_be.main:app --host 0.0.0.0 --port 8000 --no-access-log
