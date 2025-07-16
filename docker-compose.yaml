@@ -1,0 +1,35 @@
+services:
+  ai_engine:
+    container_name: voice_bridge_container
+    build: .
+    network_mode: host
+    env_file:
+      - .env
+    depends_on:
+      - ai_postgresql
+
+  ai_postgresql:
+    container_name: voice_bridge_postgresql_container
+    image: postgres:14.4
+    network_mode: host
+    env_file:
+      - .env_docker
+    volumes:
+      - ai_postgres_data:/var/lib/postgresql/data
+      - ./custom_postgresql.conf:/etc/postgresql/postgresql.conf
+    command: -c 'config_file=/etc/postgresql/postgresql.conf'
+
+  test_database:
+    container_name: test_postgresql_container
+    image: postgres:14.4
+    network_mode: host
+    env_file:
+      - .env_test
+    volumes:
+      - test_postgres_data:/var/lib/postgresql/data
+      - ./custom_postgresql_test.conf:/etc/postgresql/postgresql.conf
+    command: -c 'config_file=/etc/postgresql/postgresql.conf'
+
+volumes:
+  ai_postgres_data: {}
+  test_postgres_data: {}
