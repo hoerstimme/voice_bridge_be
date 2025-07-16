@@ -8,6 +8,11 @@ from voice_bridge_be import PACKAGE_ROOT
 
 
 class Settings(BaseSettings):
+    postgres_user: str = "user"
+    postgres_password: str = "password"
+    postgres_db: str = "base"
+    db_host: str = "localhost"
+    db_port: int = 5444
     openai_api_key: str
     eleven_labs_api_key: str
     eleven_labs_url: str
