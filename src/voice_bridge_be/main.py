@@ -6,6 +6,7 @@ from fastapi.openapi.docs import get_swagger_ui_html
 from starlette.middleware.cors import CORSMiddleware
 
 from voice_bridge_be import PACKAGE_ROOT
+from voice_bridge_be.routes import text_to_speach_eleven_labs, audio_transcript
 
 
 def get_project_version() -> str:
@@ -20,6 +21,8 @@ app = FastAPI(
 )
 
 routers = [
+    text_to_speach_eleven_labs.app,
+    audio_transcript.app
 ]
 
 for router in routers:
