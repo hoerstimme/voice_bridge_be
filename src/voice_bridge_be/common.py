@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     openai_api_key: str
     eleven_labs_api_key: str
     eleven_labs_url: str
+    gemini_api_key_dev: str
+    rev_ai_api_key_dev: str
+
 
     class Config:
         env_file = "../../../.env"
@@ -46,6 +49,11 @@ def get_open_ai_key():
 def get_eleven_labs_api_key():
     eleven_labs_api_key = get_settings().eleven_labs_api_key
     return eleven_labs_api_key
+
+
+def get_rev_ai_key():
+    rev_ai_api_key_dev = get_settings().rev_ai_api_key_dev
+    return rev_ai_api_key_dev
 
 
 client = OpenAI(api_key=get_open_ai_key())

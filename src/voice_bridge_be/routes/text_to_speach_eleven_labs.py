@@ -26,8 +26,6 @@ def generate_stream_audio(request: AudioRequest,
     return produce_stream_audio(request=request)
 
 
-@app.websocket("/tts/ws_audio")
-async def generate_ws_audio(websocket: WebSocket,
-                            eleven_labs_key: str = Depends(get_eleven_labs_api_key)
-                            ):
+@app.websocket("/ws/tts/generate_audio")
+async def generate_ws_audio(websocket: WebSocket):
     await handle_generate_ws_audio(websocket)

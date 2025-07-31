@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import json
 import os
@@ -83,67 +84,77 @@ async def handle_generate_ws_audio(websocket: WebSocket):
     logger.info("WebSocket connecting.")
     await websocket.accept()
     try:
-        data = await websocket.receive_json()
-        text, voice_name = validate_input(data, websocket)
-        if not text or not voice_name:
-            logger.error("Need to provide text and voice for processing.")
-            raise HTTPException(status_code=422, detail="Please provide text and voice.")
+        while True:
+            data = await websocket.receive_json()
+            text, voice_name = await validate_input(data)
+            if not text or not voice_name:
+                await websocket.send_json({"error": "Please provide text and voice."})
+                await websocket.close(code=4000)
+                break
+            voice_id = get_voice_id(voice_name=voice_name)
+            url, headers = construct_eleven_labs_ws_config(voice_id)
 
-        voice_id = get_voice_id(voice_name=voice_name)
-        url, headers = construct_eleven_labs_ws_config(voice_id)
-
-        await process_eleven_labs_connection(websocket, url, headers, text)
+            await process_eleven_labs_connection(websocket, url, headers, text)
 
     except WebSocketDisconnect:
-        logger.error("Client closed connection")
-        print("Client closed connection")
+        print("Client disconnected")
     except Exception as e:
-        logger.error(f"Error: {e}")
         print(f"Error: {e}")
+        if websocket.client_state != WebSocketState.DISCONNECTED:
+            await websocket.close()
         await websocket.close()
 
 
-def validate_input(data: dict, websocket: WebSocket):
+async def validate_input(data: dict):
     text = data.get("text", "")
-    voice_name = data.get("voice".lower(), "")
-
+    voice_name = data.get("voice_name", "")
     if not text or not voice_name:
-        websocket.close(code=4000)
         return None, None
-    return text, voice_name
+    return text, voice_name.lower()
 
 
 def construct_eleven_labs_ws_config(voice_id: str):
     url = f"wss://api.elevenlabs.io/v1/text-to-speech/{voice_id}/stream-input"
-    headers = [
-        ("xi-api-key", get_eleven_labs_api_key()),
-        ("accept", "application/json"),
-    ]
+    headers = {
+        "xi-api-key": get_eleven_labs_api_key(),
+        "accept": "application/json",
+    }
     return url, headers
 
 
-async def process_eleven_labs_connection(websocket: WebSocket, url: str, headers: list, text: str):
-    async with websockets.connect(url, extra_headers=headers) as eleven_ws:
 
-        await eleven_ws.send(json.dumps({
-            "text": text,
-            "model_id": "eleven_multilingual_v2",
-            "voice_settings": {
-                "stability": 0.5,
-                "similarity_boost": 0.7
-            },
-            # "flush": True,
-            "generation_config": {
-                "output_format": "opus_48000_32",
-                "auto_mode": True
-            }
-        }))
-        # send empty text to mark the end of input
-        await eleven_ws.send(json.dumps({
-            "text": ""
-        }))
+async def process_eleven_labs_connection(websocket: WebSocket, url: str, headers: dict, text: str):
+    try:
+        async with websockets.connect(url, extra_headers=headers) as eleven_ws:
 
-        await stream_audio(websocket, eleven_ws)
+            await eleven_ws.send(json.dumps({
+                "text": text,
+                "model_id": "eleven_multilingual_v2",
+                #"model_id": "eleven_flash_v2_5",
+                "voice_settings": {
+                    "stability": 0.5,
+                    "similarity_boost": 0.7
+                },
+                # "flush": True,
+                "generation_config": {
+                    "output_format": "opus_48000_32",
+                    "auto_mode": True
+                }
+            }))
+            # send empty text to mark the end of input
+            await eleven_ws.send(json.dumps({"text": ""}))
+
+            await stream_audio(websocket, eleven_ws)
+
+    except asyncio.CancelledError:
+        print("Eleven Labs streaming cancelled")
+        if websocket.client_state != WebSocketState.DISCONNECTED:
+            await websocket.close()
+
+    except Exception as e:
+        print(f"Error during Eleven Labs WS connection: {e}")
+        if websocket.client_state != WebSocketState.DISCONNECTED:
+            await websocket.close()
 
 
 async def stream_audio(websocket: WebSocket, eleven_ws):
@@ -159,6 +170,12 @@ async def stream_audio(websocket: WebSocket, eleven_ws):
                 audio_bytes = base64.b64decode(audio_b64)
                 if websocket.client_state == WebSocketState.CONNECTED:
                     await websocket.send_bytes(audio_bytes)
+                else:
+                    logger.warning("WebSocket client disconnected, stopping stream.")
+                    break
 
             if obj.get("isFinal") is True:
+                logger.info("Received final audio chunk.")
                 break
+        else:
+            logger.warning("Received non-string message from Eleven Labs WS.")
