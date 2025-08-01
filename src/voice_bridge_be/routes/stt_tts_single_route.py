@@ -1,7 +1,7 @@
 import asyncio
 import base64
 import json
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, Depends
+from fastapi import WebSocket, WebSocketDisconnect, Query, Depends, APIRouter
 import aiohttp
 import websockets
 from starlette.websockets import WebSocketState
@@ -11,10 +11,10 @@ from voice_bridge_be.common import get_rev_ai_key
 from voice_bridge_be.routes.speech_to_text_rev_ai import extract_text_from_elements
 from voice_bridge_be.services.text_to_speach_el import get_voice_id, construct_eleven_labs_ws_config, stream_audio
 
-app = FastAPI()
+app = APIRouter()
 
 
-@app.websocket("/ws/voice-bridge")
+@app.websocket("/ws/voice_bridge")
 async def voice_bridge_endpoint(
     websocket: WebSocket,
     voice_name: str = Query("karl"),
