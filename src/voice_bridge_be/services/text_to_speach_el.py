@@ -97,9 +97,9 @@ async def handle_generate_ws_audio(websocket: WebSocket):
             await process_eleven_labs_connection(websocket, url, headers, text)
 
     except WebSocketDisconnect:
-        print("Client disconnected")
+        logger.warning("Client disconnected")
     except Exception as e:
-        print(f"Error: {e}")
+        logger.error(f"Error: {e}")
         if websocket.client_state != WebSocketState.DISCONNECTED:
             await websocket.close()
         await websocket.close()
@@ -147,12 +147,12 @@ async def process_eleven_labs_connection(websocket: WebSocket, url: str, headers
             await stream_audio(websocket, eleven_ws)
 
     except asyncio.CancelledError:
-        print("Eleven Labs streaming cancelled")
+        logger.warning("Eleven Labs streaming cancelled")
         if websocket.client_state != WebSocketState.DISCONNECTED:
             await websocket.close()
 
     except Exception as e:
-        print(f"Error during Eleven Labs WS connection: {e}")
+        logger.error(f"Error during Eleven Labs WS connection: {e}")
         if websocket.client_state != WebSocketState.DISCONNECTED:
             await websocket.close()
 
