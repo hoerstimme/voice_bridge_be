@@ -1,18 +1,42 @@
 import asyncio
 import base64
+import difflib
 import json
+import re
+import time
+
 from fastapi import WebSocket, WebSocketDisconnect, Query, Depends, APIRouter
 import aiohttp
 import websockets
 from starlette.websockets import WebSocketState
 
 from voice_bridge_be import logger
-from voice_bridge_be.common import get_rev_ai_key
+from voice_bridge_be.common import get_rev_ai_key, get_eleven_labs_api_key
 from voice_bridge_be.routes.speech_to_text_rev_ai import extract_text_from_elements
 from voice_bridge_be.services.text_to_speach_el import get_voice_id, construct_eleven_labs_ws_config, stream_audio
 
 app = APIRouter()
 
+
+# @app.websocket("/ws/voice_bridge")
+# async def voice_bridge_endpoint(
+#     websocket: WebSocket,
+#     voice_name: str = Query("karl"),
+#     rev_ai_token: str = Depends(get_rev_ai_key)
+# ):
+#     await websocket.accept()
+#
+#     async with aiohttp.ClientSession() as session:
+#         async with session.ws_connect(
+#             f"wss://api.rev.ai/speechtotext/v1/stream"
+#             f"?access_token={rev_ai_token}"
+#             f"&content_type=audio/x-raw;layout=interleaved;rate=16000;format=S16LE;channels=1&language=de"
+#         ) as rev_ai_ws:
+#
+#             await asyncio.gather(
+#                 forward_audio_to_rev_ai(websocket, rev_ai_ws),
+#                 handle_revai_and_forward_to_tts(websocket, rev_ai_ws, voice_name)
+#             )
 
 @app.websocket("/ws/voice_bridge")
 async def voice_bridge_endpoint(
@@ -21,107 +45,129 @@ async def voice_bridge_endpoint(
     rev_ai_token: str = Depends(get_rev_ai_key)
 ):
     await websocket.accept()
+    tts_task = None
 
-    async with aiohttp.ClientSession() as session:
-        async with session.ws_connect(
-            f"wss://api.rev.ai/speechtotext/v1/stream"
-            f"?access_token={rev_ai_token}"
-            f"&content_type=audio/x-raw;layout=interleaved;rate=16000;format=S16LE;channels=1&language=de"
-        ) as rev_ai_ws:
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.ws_connect(
+                    f"wss://api.rev.ai/speechtotext/v1/stream"
+                    f"?access_token={rev_ai_token}"
+                    f"&content_type=audio/x-raw;rate=16000;format=S16LE;channels=1"
+                    f"&language=de"
+            ) as rev_ai_ws:
+            # async with session.ws_connect(
+            #     f"wss://api.rev.ai/speechtotext/v1/stream"
+            #     f"?access_token={rev_ai_token}"
+            #     f"&content_type=audio/x-raw;layout=interleaved;rate=16000;format=S16LE;channels=1"
+            #     f"&language=de"
+            # ) as rev_ai_ws:
 
-            await asyncio.gather(
-                forward_audio_to_rev_ai(websocket, rev_ai_ws),
-                handle_revai_and_forward_to_tts(websocket, rev_ai_ws, voice_name)
-            )
+                logger.info("✅ WebSocket connections established: client <-> Rev.ai")
+
+                # Define the two main coroutines
+                forward_task = asyncio.create_task(
+                    forward_audio_to_rev_ai(websocket, rev_ai_ws)
+                )
+
+                tts_task = asyncio.create_task(
+                    handle_revai_and_forward_to_tts(websocket, rev_ai_ws, voice_name)
+                )
+                logger.info(f"🔎 Rev.ai WebSocket opened? {rev_ai_ws.closed}")
+                logger.info(f"🔎 Rev.ai close code: {rev_ai_ws.close_code}")
+                logger.info(f"🔎 Rev.ai exception: {rev_ai_ws.exception()}")
+                # Wait for both tasks to finish or be cancelled
+                await asyncio.gather(forward_task, tts_task)
+
+    except Exception as e:
+        logger.exception(f"❌ Error in /ws/voice_bridge endpoint: {e}")
 
 
 async def forward_audio_to_rev_ai(websocket: WebSocket, rev_ai_ws: aiohttp.ClientWebSocketResponse):
     try:
         while True:
-            chunk = await websocket.receive_bytes()
-            logger.info(f"Received audio chunk size: {len(chunk)} bytes")
-            await rev_ai_ws.send_bytes(chunk)
-    except WebSocketDisconnect:
-        logger.error("Client disconnected, sending EOS to Rev.ai")
-        await rev_ai_ws.send_str("EOS")
+            message = await websocket.receive()
+            print(message)
+            if message["type"] == "websocket.disconnect":
+                logger.warning("🔌 WebSocket client disconnected unexpectedly")
+                if not rev_ai_ws.closed:
+                    await rev_ai_ws.send_str("EOS")
+                break
+
+            elif "bytes" in message:
+                chunk = message["bytes"]
+
+                if rev_ai_ws.closed:
+                    logger.warning("🚫 Rev.ai WebSocket is already closed, cannot send audio.")
+                    break
+
+                logger.info(f"🎧 Received audio chunk size: {len(chunk)} bytes")
+                await rev_ai_ws.send_bytes(chunk)
+
+            elif "text" in message and message["text"] == "EOS":
+                logger.info("📨 Received EOS from client — closing Rev.ai connection")
+                await rev_ai_ws.send_str("EOS")
+                break
+        logger.info(f"📴 Rev.ai WS closed? {rev_ai_ws.closed}")
+        logger.info(f"📴 Rev.ai close code: {rev_ai_ws.close_code}")
+        logger.info(f"📴 Rev.ai exception: {rev_ai_ws.exception()}")
+
+    except Exception as e:
+        logger.exception(f"❌ Exception while forwarding audio to Rev.ai: {e}")
 
 
 async def handle_revai_and_forward_to_tts(websocket: WebSocket,
                                           rev_ai_ws: aiohttp.ClientWebSocketResponse,
                                           voice_name: str):
-    last_partial = ""
-    debounce_task = None
-    flush_task = None
-
-    # Helper: cancel tasks safely
-    def cancel_task(task):
-        if task and not task.done():
-            task.cancel()
-
-    async def debounce_send_tts(text):
-        try:
-            await asyncio.sleep(0.5)  # debounce 500ms
-            # Pošalji na TTS
-            await trigger_tts_and_stream(websocket, text, voice_name)
-        except asyncio.CancelledError:
-            # task je otkazan jer je došao novi partial pre isteka 500ms
-            pass
-
-    async def flush_send_tts(text):
-        try:
-            await asyncio.sleep(2)  # flush timeout 2s
-            # Pošalji šta je zadnje stiglo na TTS
-            await trigger_tts_and_stream(websocket, text, voice_name)
-        except asyncio.CancelledError:
-            pass
-
     try:
         async for msg in rev_ai_ws:
-            if msg.type != aiohttp.WSMsgType.TEXT:
-                continue
+            if msg.type == aiohttp.WSMsgType.TEXT:
+                data = json.loads(msg.data)
+                msg_type = data.get("type")
+                elements = data.get("elements", [])
+                text = extract_text_from_elements(elements)
 
-            data = json.loads(msg.data)
-            msg_type = data.get("type")
-            elements = data.get("elements", [])
-            text = extract_text_from_elements(elements)
+                if not text:
+                    continue
 
-            if not text:
-                continue
-
-            if msg_type == "partial":
-                # Pošalji partial na FE odmah
-                if text != last_partial:
-                    last_partial = text
+                if msg_type == "partial":
+                    logger.info(f"📤 Sending partial to FE: {text}")
                     await websocket.send_json({"type": "partial", "text": text})
 
-                    # Resetuj debounce i flush taskove
-                    cancel_task(debounce_task)
-                    cancel_task(flush_task)
+                elif msg_type == "final":
+                    logger.info(f"📤 Sending final to FE: {text}")
+                    await websocket.send_json({"type": "final", "text": text})
 
-                    # Pokreni nove
-                    debounce_task = asyncio.create_task(debounce_send_tts(text))
-                    flush_task = asyncio.create_task(flush_send_tts(text))
+                    logger.info(f"🗣️ Sending final to TTS: {text}")
+                    await trigger_tts_and_stream(websocket, text, voice_name)
 
-            elif msg_type == "final":
-                # Pošalji final samo FE
-                await websocket.send_json({"type": "final", "text": text})
-                last_partial = ""
+            elif msg.type == aiohttp.WSMsgType.ERROR:
+                logger.error(f"❌ Rev.ai WebSocket error: {rev_ai_ws.exception()}")
+                break
 
-                # Otkazi pending debounce/flush taskove jer final je stigao
-                cancel_task(debounce_task)
-                cancel_task(flush_task)
+            elif msg.type == aiohttp.WSMsgType.CLOSE:
+                logger.warning(f"🔌 Rev.ai WebSocket closed. Code: {rev_ai_ws.close_code}")
+                break
 
     except Exception as e:
-        logger.error("Error in STT-TTS handling:", e)
+        logger.exception("❌ Error in STT-TTS handling:", exc_info=e)
 
 
 async def trigger_tts_and_stream(websocket: WebSocket, text: str, voice_name: str):
     voice_id = get_voice_id(voice_name)
+    if not voice_id:
+        logger.error(f"❌ Invalid voice ID for voice '{voice_name}'")
+        return
+
     url, headers = construct_eleven_labs_ws_config(voice_id)
 
     try:
+        logger.info(f"🔁 Forwarding text to ElevenLabs: '{text}' with voice '{voice_name}'")
+        logger.info(f"🌐 Connecting to ElevenLabs WS at: {url}")
+
         async with websockets.connect(url, extra_headers=headers) as eleven_ws:
-            await eleven_ws.send(json.dumps({
+            logger.info("🟢 WebSocket connection to Eleven Labs established.")
+
+            payload = {
                 "text": text,
                 "model_id": "eleven_multilingual_v2",
                 "voice_settings": {
@@ -130,12 +176,20 @@ async def trigger_tts_and_stream(websocket: WebSocket, text: str, voice_name: st
                 },
                 "generation_config": {
                     "output_format": "opus_48000_32",
-                    "auto_mode": True
+                    "auto_mode": True # todo check if sentence
                 }
-            }))
+            }
+            logger.info(f"📤 Payload to Eleven Labs:\n{json.dumps(payload, indent=2)}")
+
+            await eleven_ws.send(json.dumps(payload))
             await eleven_ws.send(json.dumps({"text": ""}))
 
             await stream_audio(websocket, eleven_ws)
 
+    except asyncio.CancelledError:
+        logger.warning("TTS task cancelled")
+        if websocket.client_state != WebSocketState.DISCONNECTED:
+            await websocket.close()
+
     except Exception as e:
-        logger.error("TTS stream error:", e)
+        logger.exception(f"❌ Error during Eleven Labs WS connection: {e}")
