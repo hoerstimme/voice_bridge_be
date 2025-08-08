@@ -1,42 +1,19 @@
 import asyncio
-import base64
-import difflib
 import json
-import re
-import time
 
-from fastapi import WebSocket, WebSocketDisconnect, Query, Depends, APIRouter
+
+from fastapi import WebSocket, Query, Depends, APIRouter
 import aiohttp
 import websockets
 from starlette.websockets import WebSocketState
 
 from voice_bridge_be import logger
-from voice_bridge_be.common import get_rev_ai_key, get_eleven_labs_api_key
+from voice_bridge_be.common import get_rev_ai_key
 from voice_bridge_be.routes.speech_to_text_rev_ai import extract_text_from_elements
 from voice_bridge_be.services.text_to_speach_el import get_voice_id, construct_eleven_labs_ws_config, stream_audio
 
 app = APIRouter()
 
-
-# @app.websocket("/ws/voice_bridge")
-# async def voice_bridge_endpoint(
-#     websocket: WebSocket,
-#     voice_name: str = Query("karl"),
-#     rev_ai_token: str = Depends(get_rev_ai_key)
-# ):
-#     await websocket.accept()
-#
-#     async with aiohttp.ClientSession() as session:
-#         async with session.ws_connect(
-#             f"wss://api.rev.ai/speechtotext/v1/stream"
-#             f"?access_token={rev_ai_token}"
-#             f"&content_type=audio/x-raw;layout=interleaved;rate=16000;format=S16LE;channels=1&language=de"
-#         ) as rev_ai_ws:
-#
-#             await asyncio.gather(
-#                 forward_audio_to_rev_ai(websocket, rev_ai_ws),
-#                 handle_revai_and_forward_to_tts(websocket, rev_ai_ws, voice_name)
-#             )
 
 @app.websocket("/ws/voice_bridge")
 async def voice_bridge_endpoint(
@@ -45,22 +22,15 @@ async def voice_bridge_endpoint(
     rev_ai_token: str = Depends(get_rev_ai_key)
 ):
     await websocket.accept()
-    tts_task = None
 
     try:
         async with aiohttp.ClientSession() as session:
             async with session.ws_connect(
-                    f"wss://api.rev.ai/speechtotext/v1/stream"
-                    f"?access_token={rev_ai_token}"
-                    f"&content_type=audio/x-raw;rate=16000;format=S16LE;channels=1"
-                    f"&language=de"
+                f"wss://api.rev.ai/speechtotext/v1/stream"
+                f"?access_token={rev_ai_token}"
+                f"&content_type=audio/x-raw;layout=interleaved;rate=16000;format=S16LE;channels=1"
+                f"&language=de"
             ) as rev_ai_ws:
-            # async with session.ws_connect(
-            #     f"wss://api.rev.ai/speechtotext/v1/stream"
-            #     f"?access_token={rev_ai_token}"
-            #     f"&content_type=audio/x-raw;layout=interleaved;rate=16000;format=S16LE;channels=1"
-            #     f"&language=de"
-            # ) as rev_ai_ws:
 
                 logger.info("✅ WebSocket connections established: client <-> Rev.ai")
 
@@ -72,9 +42,7 @@ async def voice_bridge_endpoint(
                 tts_task = asyncio.create_task(
                     handle_revai_and_forward_to_tts(websocket, rev_ai_ws, voice_name)
                 )
-                logger.info(f"🔎 Rev.ai WebSocket opened? {rev_ai_ws.closed}")
-                logger.info(f"🔎 Rev.ai close code: {rev_ai_ws.close_code}")
-                logger.info(f"🔎 Rev.ai exception: {rev_ai_ws.exception()}")
+
                 # Wait for both tasks to finish or be cancelled
                 await asyncio.gather(forward_task, tts_task)
 
@@ -107,9 +75,6 @@ async def forward_audio_to_rev_ai(websocket: WebSocket, rev_ai_ws: aiohttp.Clien
                 logger.info("📨 Received EOS from client — closing Rev.ai connection")
                 await rev_ai_ws.send_str("EOS")
                 break
-        logger.info(f"📴 Rev.ai WS closed? {rev_ai_ws.closed}")
-        logger.info(f"📴 Rev.ai close code: {rev_ai_ws.close_code}")
-        logger.info(f"📴 Rev.ai exception: {rev_ai_ws.exception()}")
 
     except Exception as e:
         logger.exception(f"❌ Exception while forwarding audio to Rev.ai: {e}")
@@ -170,13 +135,13 @@ async def trigger_tts_and_stream(websocket: WebSocket, text: str, voice_name: st
             payload = {
                 "text": text,
                 "model_id": "eleven_multilingual_v2",
+                "language_code": "de",
                 "voice_settings": {
                     "stability": 0.5,
                     "similarity_boost": 0.7
                 },
                 "generation_config": {
-                    "output_format": "opus_48000_32",
-                    "auto_mode": True # todo check if sentence
+                    "output_format": "opus_48000_32"
                 }
             }
             logger.info(f"📤 Payload to Eleven Labs:\n{json.dumps(payload, indent=2)}")

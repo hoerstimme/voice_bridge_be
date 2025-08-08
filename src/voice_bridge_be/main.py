@@ -7,7 +7,7 @@ from starlette.middleware.cors import CORSMiddleware
 
 from voice_bridge_be import PACKAGE_ROOT
 from voice_bridge_be.routes import text_to_speach_eleven_labs, audio_transcript, speech_to_text_rev_ai, \
-    stt_tts_single_route
+    stt_tts_single_route, voice_to_voice
 
 
 def get_project_version() -> str:
@@ -25,7 +25,8 @@ routers = [
     text_to_speach_eleven_labs.app,
     audio_transcript.app,
     speech_to_text_rev_ai.app,
-    stt_tts_single_route.app
+    stt_tts_single_route.app,
+    voice_to_voice.app
 ]
 
 for router in routers:
