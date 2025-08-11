@@ -10,7 +10,7 @@ from voice_bridge_be.services.text_to_speach_el import VOICE_MAPPING, produce_st
 app = APIRouter()
 
 
-@app.get("/tts/available_voices",
+@app.get("/available_voices",
          status_code=status.HTTP_200_OK,
          response_model=AvailableVoices)
 def list_voices():
