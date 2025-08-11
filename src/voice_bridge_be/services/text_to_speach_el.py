@@ -5,7 +5,7 @@ import os
 from typing import Optional
 
 import websockets
-from elevenlabs import ElevenLabs, stream
+from elevenlabs import ElevenLabs
 from fastapi import HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from starlette.websockets import WebSocket, WebSocketDisconnect, WebSocketState
@@ -15,9 +15,11 @@ from voice_bridge_be.common import get_eleven_labs_api_key
 from voice_bridge_be.database.request_models import AudioRequest
 
 VOICE_MAPPING = {
-    "karl": "VO7pRycLkEn8V7IWzZ0r",
-    "jessica": "g6xIsTj2HwM6VR4iXFCw",
-    "test": "nPczCjzI2devNBz1zQrb"
+    "Ben": "aTTiK3YzK3dXETpuDE2h",
+    "Anny": "ZgahlWh5FVSG7MFjZwPE",
+    "Susi": "v3V1d2rk6528UrLKRuy8",
+    "Tony Saxon": "sbJf8opzqSGRyRJzCVjD",
+    "Otto": "FTNCalFNG5bRnkkaP5Ug"
 }
 
 DEFAULT_TEXT = """Guten Morgen!
@@ -58,7 +60,8 @@ def produce_stream_audio(request: AudioRequest):
             model_id=MODEL_ID,
         )
         logger.info("Stream function.")
-        #stream(audio_stream)
+
+        # stream(audio_stream)
         def audio_chunk_generator():
             for chunk in audio_stream:
                 if isinstance(chunk, bytes):
@@ -122,7 +125,6 @@ def construct_eleven_labs_ws_config(voice_id: str):
     return url, headers
 
 
-
 async def process_eleven_labs_connection(websocket: WebSocket, url: str, headers: dict, text: str):
     try:
         async with websockets.connect(url, extra_headers=headers) as eleven_ws:
@@ -130,7 +132,7 @@ async def process_eleven_labs_connection(websocket: WebSocket, url: str, headers
             await eleven_ws.send(json.dumps({
                 "text": text,
                 "model_id": "eleven_multilingual_v2",
-                #"model_id": "eleven_flash_v2_5",
+                # "model_id": "eleven_flash_v2_5",
                 "voice_settings": {
                     "stability": 0.5,
                     "similarity_boost": 0.7
@@ -157,60 +159,27 @@ async def process_eleven_labs_connection(websocket: WebSocket, url: str, headers
             await websocket.close()
 
 
-# async def stream_audio(websocket: WebSocket, eleven_ws):
-#     logger.info("WebSocket start stream audio.")
-#     while True:
-#         msg = await eleven_ws.recv()
-#
-#
-#         if isinstance(msg, str):
-#             obj = json.loads(msg)
-#
-#             audio_b64 = obj.get("audio")
-#             if audio_b64:
-#                 audio_bytes = base64.b64decode(audio_b64)
-#                 logger.info(f"🔊 Received audio chunk, length: {len(audio_bytes)} bytes")
-#
-#                 if websocket.client_state == WebSocketState.CONNECTED:
-#                     await websocket.send_bytes(audio_bytes)
-#                 else:
-#                     logger.warning("WebSocket client disconnected, stopping stream.")
-#                     break
-#
-#             if obj.get("isFinal") is True:
-#                 logger.info("Received final audio chunk.")
-#                 break
-#         else:
-#             logger.warning("Received non-string message from Eleven Labs WS.")
-
-
 async def stream_audio(websocket: WebSocket, eleven_ws):
-    logger.info("📡 Waiting for audio from Eleven Labs...")
-    try:
-        while True:
-            msg = await eleven_ws.recv()
-            logger.info(f"📩 Eleven Labs WS received message: {type(msg)}")
+    logger.info("WebSocket start stream audio.")
+    while True:
+        msg = await eleven_ws.recv()
 
-            if isinstance(msg, str):
-                logger.info(f"📜 Eleven Labs text msg: {msg}")
-                obj = json.loads(msg)
+        if isinstance(msg, str):
+            obj = json.loads(msg)
 
-                audio_b64 = obj.get("audio")
-                if audio_b64:
-                    audio_bytes = base64.b64decode(audio_b64)
-                    logger.info(f"🔊 Decoded audio length: {len(audio_bytes)} bytes")
+            audio_b64 = obj.get("audio")
+            if audio_b64:
+                audio_bytes = base64.b64decode(audio_b64)
+                logger.info(f"🔊 Received audio chunk, length: {len(audio_bytes)} bytes")
 
-                    if websocket.client_state == WebSocketState.CONNECTED:
-                        await websocket.send_bytes(audio_bytes)
-                        logger.info("📤 Sent audio to FE")
-                    else:
-                        logger.warning("❌ WebSocket client disconnected, stopping stream.")
-                        break
-
-                if obj.get("isFinal") is True:
-                    logger.info("✅ Received final audio chunk from Eleven Labs.")
+                if websocket.client_state == WebSocketState.CONNECTED:
+                    await websocket.send_bytes(audio_bytes)
+                else:
+                    logger.warning("WebSocket client disconnected, stopping stream.")
                     break
-            else:
-                logger.warning("⚠️ Received non-string message from Eleven Labs.")
-    except Exception as e:
-        logger.error(f"❌ Error inside stream_audio: {e}")
+
+            if obj.get("isFinal") is True:
+                logger.info("Received final audio chunk.")
+                break
+        else:
+            logger.warning("Received non-string message from Eleven Labs WS.")

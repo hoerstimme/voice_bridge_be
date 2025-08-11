@@ -18,7 +18,7 @@ app = APIRouter()
 @app.websocket("/ws/voice_bridge")
 async def voice_bridge_endpoint(
     websocket: WebSocket,
-    voice_name: str = Query("karl"),
+    voice_name: str = Query("Ben"),
     rev_ai_token: str = Depends(get_rev_ai_key)
 ):
     await websocket.accept()
