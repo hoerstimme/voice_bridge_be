@@ -14,7 +14,7 @@ app = APIRouter()
          status_code=status.HTTP_200_OK,
          response_model=AvailableVoices)
 def list_voices():
-    return AvailableVoices(voices=[voice_name for voice_name in VOICE_MAPPING.keys()])
+    return AvailableVoices(voices=[voice_name.capitalize() for voice_name in VOICE_MAPPING.keys()])
 
 
 @app.post("/tts/stream_audio",

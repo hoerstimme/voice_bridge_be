@@ -15,11 +15,11 @@ from voice_bridge_be.common import get_eleven_labs_api_key
 from voice_bridge_be.database.request_models import AudioRequest
 
 VOICE_MAPPING = {
-    "Ben": "aTTiK3YzK3dXETpuDE2h",
-    "Anny": "ZgahlWh5FVSG7MFjZwPE",
-    "Susi": "v3V1d2rk6528UrLKRuy8",
-    "Tony Saxon": "sbJf8opzqSGRyRJzCVjD",
-    "Otto": "FTNCalFNG5bRnkkaP5Ug"
+    "ben": "aTTiK3YzK3dXETpuDE2h",
+    "anny": "ZgahlWh5FVSG7MFjZwPE",
+    "susi": "v3V1d2rk6528UrLKRuy8",
+    "tony saxon": "sbJf8opzqSGRyRJzCVjD",
+    "otto": "FTNCalFNG5bRnkkaP5Ug"
 }
 
 DEFAULT_TEXT = """Guten Morgen!
