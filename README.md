@@ -49,22 +49,26 @@ This feature relies solely on ELEVEN_LABS_API_KEY. However, due to the overall p
 # 🛠 Installation & Run
 
 1️⃣ Clone the repository (or checkout this branch):
-
+```bash
 git clone https://github.com/hoerstimme/voice_bridge_be.git
 cd voice_bridge_be
 git checkout branch_name (ex. feat/voice_to_voice)
+```
 
 2️⃣ Install Poetry (if you don’t have it yet):
-
+```bash
 pip install poetry
+```
 
 3️⃣ Install dependencies:
-
+```bash
 poetry install
+```
 
 4️⃣ Start the server:
-
+```bash
 poetry run uvicorn voice_bridge_be.main:app --host 127.0.0.1 --port 8001 --log-level debug
+```
 
 The server will be available at:
 
