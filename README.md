@@ -9,8 +9,9 @@ This branch contains the **backend implementation** for multiple speech transfor
 ---
 
 ⚠ **Note:**  
-If you are using the above-mentioned frontend, use **only** the STS with ElevenLabs route:  
+If you are using the above-mentioned frontend, use **only** the STS with ElevenLabs route, and route for getting available voices:  
 `/convert_voice_stream_bytes_webm`
+`/available_voices`
 
 ---
 
@@ -29,8 +30,19 @@ Make sure you have the following installed:
 In the backend root directory, create a `.env` file with the following content:
 
 ```env
+DB_HOST=value
+DB_PORT=value
+POSTGRES_USER=value
+POSTGRES_PASSWORD=value
+POSTGRES_DB=value
+OPENAI_API_KEY=your_openai_api_key_here
 ELEVEN_LABS_API_KEY=your_elevenlabs_api_key_here
+ELEVEN_LABS_URL=https://api.elevenlabs.io/v1/text-to-speech/
+GEMINI_API_KEY_DEV=your_gemini_api_key_here
+REV_AI_API_KEY_DEV=your_revai_api_key_here
 ```
+
+This feature relies solely on ELEVEN_LABS_API_KEY. However, due to the overall project configuration, all other environment variables must also be included in the .env file, even if they are not used in this particular feature.
 
 ---
 
