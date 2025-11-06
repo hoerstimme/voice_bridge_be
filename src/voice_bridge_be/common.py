@@ -56,4 +56,4 @@ def get_rev_ai_key():
     return rev_ai_api_key_dev
 
 
-client = OpenAI(api_key=get_open_ai_key())
+# client = OpenAI(api_key=get_open_ai_key())
