@@ -19,4 +19,19 @@ The codebase is under active development.
 Many files and modules are not yet cleaned up or fully documented.
 Breaking changes and refactors are likely as we optimize for real-time streaming and latency.
 
+## 🪪 License
+
+This project is released under the **PolyForm Noncommercial License 1.0.0**.
+
+That means:
+
+- ✅ You can **view, clone, and modify** the code for **personal, academic, or research use**.
+- 🚫 You **cannot use, sell, or integrate** this code in **commercial applications**.
+- 🧠 You must **include this license** in any copies or derivatives.
+
+For commercial or partnership inquiries, please contact:  
+📧 contact@hoerstimme.org
+
+See the full license text at:  
+🔗 [PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0/)
 
