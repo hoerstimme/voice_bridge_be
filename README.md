@@ -19,9 +19,17 @@ The codebase is under active development.
 Many files and modules are not yet cleaned up or fully documented.
 Breaking changes and refactors are likely as we optimize for real-time streaming and latency.
 
+
+## 🏢 Ownership
+
+All code and related assets in this repository are the intellectual property of  
+**sinceare UG (haftungsbeschränkt)**, Berlin, Germany.
+
+
 ## 🪪 License
 
-This project is released under the **PolyForm Noncommercial License 1.0.0**.
+The software is released under the [PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0/),  
+which permits noncommercial use, modification, and distribution.
 
 That means:
 
@@ -30,8 +38,17 @@ That means:
 - 🧠 You must **include this license** in any copies or derivatives.
 
 For commercial or partnership inquiries, please contact:  
-📧 contact@hoerstimme.org
+📧 ps@sinceare.com
 
 See the full license text at:  
 🔗 [PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0/)
+
+## 🏢 Ownership
+
+All code and related assets in this repository are the intellectual property of  
+**sinceare UG (haftungsbeschränkt)**, Berlin, Germany.
+
+
+
+
 
