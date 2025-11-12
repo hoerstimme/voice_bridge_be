@@ -1,3 +1,78 @@
+#
+# Ownership & License Notice
+#
+# All code and related assets in this file are the intellectual property of
+# sinceare UG (haftungsbeschränkt), Berlin, Germany.
+#
+# Released under the PolyForm Noncommercial License 1.0.0:
+# https://polyformproject.org/licenses/noncommercial/1.0.0/
+#
+# - You may view, clone, and modify this code for personal, academic, or research use.
+# - Commercial use, sale, or integration in commercial applications is prohibited.
+# - You must include this license notice in any copies or derivatives.
+#
+# For commercial or partnership inquiries, contact: ps@sinceare.com
+#
+#
+from openai import OpenAI
+from pydantic_settings import BaseSettings
+
+
+import openai
+
+from voice_bridge_be import PACKAGE_ROOT
+
+
+class Settings(BaseSettings):
+    postgres_user: str = "user"
+    postgres_password: str = "password"
+    postgres_db: str = "base"
+    db_host: str = "localhost"
+    db_port: int = 5444
+    openai_api_key: str
+    eleven_labs_api_key: str
+    eleven_labs_url: str
+    gemini_api_key_dev: str
+    rev_ai_api_key_dev: str
+
+
+    class Config:
+        env_file = "../../../.env"
+        env_file_encoding = "utf-8"
+
+
+def get_settings(env_path=None):
+    if env_path is None:
+        env_path = PACKAGE_ROOT / ".env"
+    settings = Settings(_env_file=env_path, _env_file_encoding="utf-8")
+    return settings
+
+def get_database_url(env_path=None) -> str:
+    if env_path is None:
+        env_path = PACKAGE_ROOT / ".env"
+    settings = Settings(_env_file=env_path, _env_file_encoding="utf-8")
+    url = (
+        f"postgresql+psycopg://{settings.postgres_user}:{settings.postgres_password}@{settings.db_host}:"
+        f"{settings.db_port}/{settings.ai_postgres_db}"
+    )
+    return url
+
+def get_open_ai_key():
+    openai.api_key = get_settings().openai_api_key
+    return openai.api_key
+
+
+def get_eleven_labs_api_key():
+    eleven_labs_api_key = get_settings().eleven_labs_api_key
+    return eleven_labs_api_key
+
+
+def get_rev_ai_key():
+    rev_ai_api_key_dev = get_settings().rev_ai_api_key_dev
+    return rev_ai_api_key_dev
+
+
+# client = OpenAI(api_key=get_open_ai_key())
 from openai import OpenAI
 from pydantic_settings import BaseSettings
 
