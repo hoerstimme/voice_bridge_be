@@ -2,7 +2,7 @@ services:
   app:
     build: .
     ports:
-      - "8000:8000"
+      - "8001:8000"
     env_file:
       - .env
     depends_on:
@@ -17,14 +17,21 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
-  test:
-    image: postgres:14.4
+  # test:
+  #   image: postgres:14.4
+  #   ports:
+  #     - "5445:5432"
+  #   env_file:
+  #     - .env_test
+  #   volumes:
+  #     - test_postgres_data:/var/lib/postgresql/data
+  
+  frontend:
+    build: ./../voice_bridge_fe
     ports:
-      - "5445:5432"
+      - "3000:3000"
     env_file:
-      - .env_test
-    volumes:
-      - test_postgres_data:/var/lib/postgresql/data
+      - .env
 
 volumes:
   postgres_data:
