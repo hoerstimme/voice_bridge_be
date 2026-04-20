@@ -1,6 +1,10 @@
 FROM python:3.12-slim
 
-RUN apt-get update; apt-get install -y curl gcc
+RUN apt-get update && apt-get install -y \
+    curl \
+    gcc \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN curl -sSL https://install.python-poetry.org | POETRY_HOME=/opt/poetry python3 && \
     cd /usr/local/bin && \
