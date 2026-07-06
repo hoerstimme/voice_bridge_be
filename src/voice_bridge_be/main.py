@@ -5,14 +5,9 @@ from fastapi.responses import RedirectResponse
 from fastapi.openapi.docs import get_swagger_ui_html
 from starlette.middleware.cors import CORSMiddleware
 
-import os
 from dotenv import load_dotenv
 
 load_dotenv()  # stellt sicher, dass .env geladen wird
-
-print("DEBUG: ELEVENLABS_API_KEY visible?", os.getenv("HS_ELEVENLABS_API_KEY_DEV"))
-print("DEBUG: OPENAI_API_KEY visible?", os.getenv("HS_OPENAI_API_KEY_DEV"))
-
 
 
 from voice_bridge_be import PACKAGE_ROOT
