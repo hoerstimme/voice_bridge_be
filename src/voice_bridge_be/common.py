@@ -14,7 +14,7 @@
 # For commercial or partnership inquiries, contact: ps@sinceare.com
 #
 #
-from openai import OpenAI
+
 from pydantic_settings import BaseSettings
 
 
@@ -32,7 +32,6 @@ class Settings(BaseSettings):
     openai_api_key: str
     eleven_labs_api_key: str
     eleven_labs_url: str
-    gemini_api_key_dev: str
     rev_ai_api_key_dev: str
 
 
