@@ -52,7 +52,7 @@ def get_database_url(env_path=None) -> str:
     settings = Settings(_env_file=env_path, _env_file_encoding="utf-8")
     url = (
         f"postgresql+psycopg://{settings.postgres_user}:{settings.postgres_password}@{settings.db_host}:"
-        f"{settings.db_port}/{settings.ai_postgres_db}"
+        f"{settings.db_port}/{settings.postgres_db}"
     )
     return url
 
