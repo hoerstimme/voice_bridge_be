@@ -38,11 +38,10 @@ POSTGRES_DB=value
 OPENAI_API_KEY=your_openai_api_key_here
 ELEVEN_LABS_API_KEY=your_elevenlabs_api_key_here
 ELEVEN_LABS_URL=https://api.elevenlabs.io/v1/text-to-speech/
-GEMINI_API_KEY_DEV=your_gemini_api_key_here
-REV_AI_API_KEY_DEV=your_revai_api_key_here
+REV_AI_API_KEY=your_revai_api_key_here
 ```
 
-This feature relies solely on ELEVEN_LABS_API_KEY. However, due to the overall project configuration, all other environment variables must also be included in the .env file, even if they are not used in this particular feature.
+Then edit the `.env` file and provide your own database settings and API keys.
 
 ---
 
