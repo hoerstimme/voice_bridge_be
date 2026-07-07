@@ -27,18 +27,12 @@ Make sure you have the following installed:
 
 ## ⚙️ `.env` Configuration
 
-In the backend root directory, create a `.env` file with the following content:
+## ⚙️ Environment Configuration
 
-```env
-DB_HOST=value
-DB_PORT=value
-POSTGRES_USER=value
-POSTGRES_PASSWORD=value
-POSTGRES_DB=value
-OPENAI_API_KEY=your_openai_api_key_here
-ELEVEN_LABS_API_KEY=your_elevenlabs_api_key_here
-ELEVEN_LABS_URL=https://api.elevenlabs.io/v1/text-to-speech/
-REV_AI_API_KEY=your_revai_api_key_here
+Copy the example configuration file and create your local `.env`:
+
+```bash
+cp .env.example .env
 ```
 
 Then edit the `.env` file and provide your own database settings and API keys.
